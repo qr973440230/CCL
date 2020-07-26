@@ -37,8 +37,8 @@ public:
     virtual bool isAbort() override;
 
 private:
-    DropNode<T> * m_wIdx;
-    DropNode<T> * m_rIdx;
+    DropNode<T> * const m_wIdx;
+    DropNode<T> * const m_rIdx;
 
     unsigned int m_maxSize;
     unsigned long m_dropTimeout;

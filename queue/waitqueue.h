@@ -36,8 +36,8 @@ public:
     virtual bool isAbort() override;
 
 private:
-    WaitNode<T> * m_wIdx;
-    WaitNode<T> * m_rIdx;
+    WaitNode<T> * const m_wIdx;
+    WaitNode<T> * const m_rIdx;
 
     unsigned int m_maxSize;
     bool m_abort;
