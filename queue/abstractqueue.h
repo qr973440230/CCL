@@ -18,6 +18,13 @@
 template <typename T>
 class AbstractQueue
 {
+protected:
+    struct QueueNode{
+        T data;
+        QueueNode * next;
+        QueueNode * pre;
+    };
+
 public:
     AbstractQueue();
     virtual ~AbstractQueue();
@@ -41,7 +48,6 @@ AbstractQueue<T>::AbstractQueue()
 template<typename T>
 AbstractQueue<T>::~AbstractQueue()
 {
-
 }
 
 #endif // ABSTRACTQUEUE_H

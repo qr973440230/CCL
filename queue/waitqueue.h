@@ -8,18 +8,12 @@
 
 #define WAIT_DEFAULT_QUEUE_MAX_SIZE 20
 
-template <typename T>
-struct WaitNode{
-    T data;
-    WaitNode<T> * next;
-    WaitNode<T> * pre;
-};
-
 /**
  * if buffer overflow, will wait.
  */
 template <typename T>
 class WaitQueue: public AbstractQueue<T>{
+    typedef typename AbstractQueue<T>::QueueNode Node;
 
 public:
     explicit WaitQueue();
@@ -36,13 +30,13 @@ public:
     virtual bool isAbort() override;
 
 private:
-    WaitNode<T> * const m_wIdx;
-    WaitNode<T> * const m_rIdx;
+    Node * m_wIdx;
+    Node * m_rIdx;
 
     unsigned int m_maxSize;
     bool m_abort;
 
-    QMap<T*,WaitNode<T>*> m_map;
+    QMap<T*,Node*> m_map;
     QMutex m_mutex;
     QWaitCondition m_cond;
 };
@@ -55,16 +49,19 @@ WaitQueue<T>::WaitQueue()
       m_maxSize(WAIT_DEFAULT_QUEUE_MAX_SIZE),
       m_abort(false)
 {
-    m_wIdx = new WaitNode<T>();
-    m_rIdx = new WaitNode<T>();
+    m_wIdx = new Node();
+    m_rIdx = new Node();
     m_wIdx->pre = m_rIdx;
     m_wIdx->next = m_rIdx;
     m_rIdx->next = m_wIdx;
     m_rIdx->pre = m_wIdx;
 
-    WaitNode<T> * node = nullptr;
+    m_map.insert(&m_wIdx->data,m_wIdx);
+    m_map.insert(&m_rIdx->data,m_rIdx);
+
+    Node * node = nullptr;
     for(unsigned int i = 0;i< m_maxSize;i++){
-        node = new WaitNode<T>();
+        node = new Node();
         node->pre = m_wIdx;
         node->next = m_wIdx->next;
         node->pre->next = node;
@@ -81,16 +78,19 @@ WaitQueue<T>::WaitQueue(unsigned long maxSize)
       m_maxSize(maxSize),
       m_abort(false)
 {
-    m_wIdx = new WaitNode<T>();
-    m_rIdx = new WaitNode<T>();
+    m_wIdx = new Node();
+    m_rIdx = new Node();
     m_wIdx->pre = m_rIdx;
     m_wIdx->next = m_rIdx;
     m_rIdx->next = m_wIdx;
     m_rIdx->pre = m_wIdx;
 
-    WaitNode<T> * node = nullptr;
+    m_map.insert(&m_wIdx->data,m_wIdx);
+    m_map.insert(&m_rIdx->data,m_rIdx);
+
+    Node * node = nullptr;
     for(unsigned int i = 0;i< m_maxSize;i++){
-        node = new WaitNode<T>();
+        node = new Node();
         node->pre = m_wIdx;
         node->next = m_wIdx->next;
         node->pre->next = node;
@@ -122,7 +122,7 @@ T *WaitQueue<T>::peekReadable(unsigned long timeout)
     }
 
     // detach read node
-    WaitNode<T> *readNode = m_rIdx->next;
+    Node *readNode = m_rIdx->next;
     readNode->pre->next = readNode->next;
     readNode->next->pre = readNode->pre;
     readNode->next = nullptr;
@@ -141,7 +141,7 @@ void WaitQueue<T>::next(T *data)
     m_mutex.lock();
 
     // insert read node
-    WaitNode<T> *readNode = m_map.value(data);
+    Node *readNode = m_map.value(data);
     readNode->pre = m_rIdx->pre;
     readNode->next = m_rIdx;
     readNode->pre->next = readNode;
@@ -165,7 +165,7 @@ T *WaitQueue<T>::peekWriteable()
     }
 
     // detach write node
-    WaitNode<T> * writeNode = m_wIdx->next;
+    Node * writeNode = m_wIdx->next;
     writeNode->pre->next = writeNode->next;
     writeNode->next->pre = writeNode->pre;
     writeNode->pre = nullptr;
@@ -184,7 +184,7 @@ void WaitQueue<T>::push(T *data)
     m_mutex.lock();
 
     // insert write node
-    WaitNode<T> * writeNode = m_map[data];
+    Node * writeNode = m_map[data];
     writeNode->pre = m_wIdx->pre;
     writeNode->next = m_wIdx;
     writeNode->pre->next = writeNode;

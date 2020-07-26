@@ -10,18 +10,12 @@
 #define DROP_DEFAULT_QUEUE_MAX_SIZE 20
 #define DROP_DEFAULT_TIME_OUT 500
 
-template <typename T>
-struct DropNode{
-    T data;
-    DropNode<T> * next;
-    DropNode<T> * pre;
-};
-
 /**
  * if buffer overflow, will drop oldest data.
  */
 template <typename T>
 class DropQueue: public AbstractQueue<T>{
+    typedef typename AbstractQueue<T>::QueueNode Node;
 
 public:
     explicit DropQueue();
@@ -37,14 +31,15 @@ public:
     virtual bool isAbort() override;
 
 private:
-    DropNode<T> * const m_wIdx;
-    DropNode<T> * const m_rIdx;
+    Node * m_wIdx;
+    Node * m_rIdx;
 
     unsigned int m_maxSize;
     unsigned long m_dropTimeout;
     bool m_abort;
 
-    QMap<T*,DropNode<T>*> m_map;
+
+    QMap<T*,Node *> m_map;
     QMutex m_mutex;
     QWaitCondition m_cond;
 };
@@ -57,16 +52,19 @@ DropQueue<T>::DropQueue()
       m_dropTimeout(DROP_DEFAULT_TIME_OUT),
       m_abort(false)
 {
-    m_wIdx = new DropNode<T>();
-    m_rIdx = new DropNode<T>();
+    m_wIdx = new Node();
+    m_rIdx = new Node();
     m_wIdx->pre = m_rIdx;
     m_wIdx->next = m_rIdx;
     m_rIdx->next = m_wIdx;
     m_rIdx->pre = m_wIdx;
 
-    DropNode<T> * node = nullptr;
+    m_map.insert(&m_wIdx->data,m_wIdx);
+    m_map.insert(&m_rIdx->data,m_rIdx);
+
+    Node * node = nullptr;
     for(unsigned int i = 0;i< m_maxSize;i++){
-        node = new DropNode<T>();
+        node = new Node();
         node->pre = m_wIdx;
         node->next = m_wIdx->next;
         node->pre->next = node;
@@ -84,16 +82,19 @@ DropQueue<T>::DropQueue(unsigned int maxSize, unsigned long dropTimeout)
       m_dropTimeout(dropTimeout),
       m_abort(false)
 {
-    m_wIdx = new DropNode<T>();
-    m_rIdx = new DropNode<T>();
+    m_wIdx = new Node();
+    m_rIdx = new Node();
     m_wIdx->pre = m_rIdx;
     m_wIdx->next = m_rIdx;
     m_rIdx->next = m_wIdx;
     m_rIdx->pre = m_wIdx;
 
-    DropNode<T> * node = nullptr;
+    m_map.insert(&m_wIdx->data,m_wIdx);
+    m_map.insert(&m_rIdx->data,m_rIdx);
+
+    Node * node = nullptr;
     for(int i = 0;i< m_maxSize;i++){
-        node = new DropNode<T>();
+        node = new Node();
         node->pre = m_wIdx;
         node->next = m_wIdx->next;
         node->pre->next = node;
@@ -119,7 +120,7 @@ T *DropQueue<T>::peekReadable(unsigned long timeout)
     }
 
     // detach read node
-    DropNode<T> *readNode = m_rIdx->next;
+    Node *readNode = m_rIdx->next;
     readNode->pre->next = readNode->next;
     readNode->next->pre = readNode->pre;
     readNode->next = nullptr;
@@ -138,7 +139,7 @@ void DropQueue<T>::next(T *data)
     m_mutex.lock();
 
     // insert read node
-    DropNode<T> *readNode = m_map[data];
+    Node *readNode = m_map[data];
     readNode->pre = m_rIdx->pre;
     readNode->next = m_rIdx;
     readNode->pre->next = readNode;
@@ -165,7 +166,7 @@ T *DropQueue<T>::peekWriteable()
     }
 
     // detach write node
-    DropNode<T> * writeNode = m_wIdx->next;
+    Node * writeNode = m_wIdx->next;
     writeNode->pre->next = writeNode->next;
     writeNode->next->pre = writeNode->pre;
     writeNode->pre = nullptr;
@@ -184,7 +185,7 @@ void DropQueue<T>::push(T *data)
     m_mutex.lock();
 
     // insert write node
-    DropNode<T> * writeNode = m_map[data];
+    Node * writeNode = m_map[data];
     writeNode->pre = m_wIdx->pre;
     writeNode->next = m_wIdx;
     writeNode->pre->next = writeNode;
@@ -210,5 +211,6 @@ bool DropQueue<T>::isAbort()
     QMutexLocker locker(&m_mutex);
     return m_abort;
 }
+
 
 #endif // DROPQUEUE_H
