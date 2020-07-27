@@ -34,12 +34,15 @@ signals:
 
     void listenError(const QString &error);
 
+    void clientConnected(const QHostAddress &addr,quint16 port);
+    void clientDisconnected(const QHostAddress &addr,quint16 port);
+
 private slots:
     void startSlot();
     void stopSlot();
 
     void writeBufferSlot(const TCPBuffer &buffer);
-    void acceptErrorSlot(QAbstractSocket::SocketError socketError);
+    void clientDisconnectedSlot(const QHostAddress &addr,quint16 port);
 
 protected:
     void incomingConnection(qintptr handle) override;
@@ -62,7 +65,7 @@ private:
     AbstractQueue<TCPBuffer> * m_queue;
 
     QThread * m_thread;
-    QList<TcpClient*> m_clients;
+    QMap<QString,TcpClient*> m_clients;
 };
 
 #endif // TCPSERVER_H

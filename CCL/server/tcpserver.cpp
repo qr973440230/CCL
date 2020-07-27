@@ -65,39 +65,72 @@ void TcpServer::writeBufferSlot(const TCPBuffer &buffer)
 {
     if(buffer.addr.isNull()){
         // send all
-        for(auto socket : m_clients){
-            socket->write(buffer.buffer,buffer.len);
+        for(auto socket : m_clients.values()){
+            socket->writeBuffer(buffer);
         }
     }else if(buffer.port == 0){
         // send point at addr
-        for(auto socket : m_clients){
-            if(socket->peerAddress() == buffer.addr){
-                socket->write(buffer.buffer,buffer.len);
+        for(auto const & key : m_clients.keys()){
+            QStringList strList = key.split("_",QString::SkipEmptyParts);
+            if(strList.size() != 2){
+                continue;
+            }
+
+            if(QHostAddress(strList.at(0)) == buffer.addr){
+                m_clients.value(key)->writeBuffer(buffer);
             }
         }
     }else{
         // send point at addr and port
-        for(auto socket : m_clients){
-            if(socket->peerAddress() == buffer.addr &&
-                    socket->peerPort() == buffer.port){
-                socket->write(buffer.buffer,buffer.len);
+        for(auto key : m_clients.keys()){
+            QStringList strList = key.split("_",QString::SkipEmptyParts);
+            if(strList.size() != 2){
+                continue;
+            }
+
+            if(QHostAddress(strList.at(0)) == buffer.addr &&
+                    strList.at(1).toUShort() == buffer.port){
+                m_clients.value(key)->writeBuffer(buffer);
             }
         }
     }
 }
 
-void TcpServer::acceptErrorSlot(QAbstractSocket::SocketError socketError)
+void TcpServer::clientDisconnectedSlot(const QHostAddress &addr, quint16 port)
 {
-    qDebug()<<"Accept Error: "<< socketError;
+    QString key = QString("%1_%2").arg(addr.toString()).arg(port);
+    TcpClient * client = m_clients.value(key,nullptr);
+    if(client){
+        qDebug()<<"Client has Closed!"<<
+                  " Addr: "<<addr<<
+                  " Port: "<<port;
+
+        client->close();
+        client->deleteLater();
+        m_clients.remove(key);
+    }else{
+        qDebug()<< "Unkown Client!!! Addr: "<<addr<<
+                   " Port: "<<port;
+    }
 }
 
 void TcpServer::incomingConnection(qintptr handle)
 {
     TcpClient * client = new TcpClient(m_queue);
+    connect(client,&TcpClient::unconnected,this,&TcpServer::clientDisconnected);
+    connect(client,&TcpClient::unconnected,this,&TcpServer::clientDisconnectedSlot);
+
     client->setSocketDescriptor(handle);
+    QHostAddress peerAddress = client->peerAddress();
+    quint16 peerPort = client->peerPort();
+    client->setHost(peerAddress);
+    client->setPort(peerPort);
+
     client->moveToThread(m_thread);
 
-    m_clients.append(client);
+    QString key = QString("%1_%2").arg(peerAddress.toString()).arg(peerPort);
+    m_clients.insert(key,client);
+    emit clientConnected(peerAddress,peerPort);
 }
 
 void TcpServer::init()
@@ -105,15 +138,16 @@ void TcpServer::init()
     m_thread = new QThread();
     m_thread->start();
 
+    qRegisterMetaType<TCPBuffer>("TCPBuffer");
+    qRegisterMetaType<QHostAddress>("QHostAddress");
     connect(this,&TcpServer::startSignal,this,&TcpServer::startSlot);
     connect(this,&TcpServer::stopSignal,this,&TcpServer::stopSlot);
     connect(this,&TcpServer::writeBufferSignal,this,&TcpServer::writeBufferSlot);
-    connect(this,&QTcpServer::acceptError,this,&TcpServer::acceptErrorSlot);
 }
 
 void TcpServer::closeSockets()
 {
-    for(auto socket : m_clients) {
+    for(auto socket : m_clients.values()) {
         socket->stop();
         socket->deleteLater();
     }

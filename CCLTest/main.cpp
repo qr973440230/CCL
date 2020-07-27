@@ -8,13 +8,14 @@
 class TestThread:public QThread
 {
 public:
-    TestThread(AbstractQueue<TCPBuffer> * queue);
+    TestThread(AbstractQueue<TCPBuffer> * queue,TcpServer * server);
 
 protected:
     void run() override;
 
 private:
     AbstractQueue<TCPBuffer> * m_queue;
+    TcpServer * m_server;
 };
 
 int main(int argc, char *argv[])
@@ -24,12 +25,7 @@ int main(int argc, char *argv[])
     QThread thread;
     thread.start();
 
-
     DropQueue<TCPBuffer> dropQueue(200,1000);
-
-    TestThread testThread(&dropQueue);
-    testThread.start();
-
 
     TcpServer server(&dropQueue);
     server.setHost(QHostAddress::Any);
@@ -37,10 +33,28 @@ int main(int argc, char *argv[])
     server.moveToThread(&thread);
     server.start();
 
+    QObject::connect(&server,&TcpServer::clientConnected,&server,[](const QHostAddress &addr,quint16 port){
+        qDebug()<<"Client Connected: "<< addr<<
+                  " Port: "<<port;
+    });
+    QObject::connect(&server,&TcpServer::clientDisconnected,&server,[](const QHostAddress &addr,quint16 port){
+        qDebug()<<"Client Disconnected: "<<addr<<
+                  " Port: "<<port;
+    });
+
+    TcpClient client(QHostAddress("127.0.0.1"),8888,&dropQueue);
+    client.start();
+    client.moveToThread(&thread);
+
+    TestThread testThread(&dropQueue,&server);
+    testThread.start();
+
+
+
     return a.exec();
 }
 
-TestThread::TestThread(AbstractQueue<TCPBuffer> *queue):m_queue(queue)
+TestThread::TestThread(AbstractQueue<TCPBuffer> *queue, TcpServer *server):m_queue(queue),m_server(server)
 {
 
 }
@@ -54,7 +68,13 @@ void TestThread::run()
             continue;
         }
 
-        qDebug()<<QByteArray(buffer->buffer,buffer->len).toHex();
+        QByteArray ba(buffer->buffer,buffer->len);
+        qDebug()<<ba.toHex();
+
+        buffer->port = 0;
+
+        m_server->writeBuffer(*buffer);
+
         m_queue->next(buffer);
     }
 }

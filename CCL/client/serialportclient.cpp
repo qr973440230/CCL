@@ -2,7 +2,7 @@
 #include <QDebug>
 
 SerialPortClient::SerialPortClient(AbstractQueue<SerialPortBuffer> *queue, QObject *parent)
-    :QObject(parent),
+    :QSerialPort(parent),
       m_baudRate(QSerialPort::Baud9600),
       m_dataBits(QSerialPort::Data8),
       m_parity(QSerialPort::Parity::NoParity),
@@ -16,7 +16,7 @@ SerialPortClient::SerialPortClient(AbstractQueue<SerialPortBuffer> *queue, QObje
 SerialPortClient::SerialPortClient(const QString &portName,
                    AbstractQueue<SerialPortBuffer> * queue,
                    QObject *parent)
-    : QObject(parent),
+    : QSerialPort(parent),
       m_portName(portName),
       m_baudRate(QSerialPort::Baud9600),
       m_dataBits(QSerialPort::Data8),
@@ -36,7 +36,7 @@ SerialPortClient::SerialPortClient(const QString &portName,
                                    QSerialPort::FlowControl flowControl,
                                    AbstractQueue<SerialPortBuffer> *queue,
                                    QObject *parent)
-    : QObject(parent),
+    : QSerialPort(parent),
       m_portName(portName),
       m_baudRate(baudRate),
       m_dataBits(dataBits),
@@ -60,40 +60,40 @@ void SerialPortClient::stop()
 
 void SerialPortClient::startSlot()
 {
-    if(m_serialPort->isOpen()){
-        m_serialPort->close();
+    if(isOpen()){
+        close();
     }
 
-    m_serialPort->setPortName(m_portName);
-    m_serialPort->setBaudRate(m_baudRate);
-    m_serialPort->setDataBits(m_dataBits);
-    m_serialPort->setParity(m_parity);
-    m_serialPort->setStopBits(m_stopBits);
-    m_serialPort->setFlowControl(m_flowControl);
-    if(!m_serialPort->open(QIODevice::ReadWrite)){
+    setPortName(m_portName);
+    setBaudRate(m_baudRate);
+    setDataBits(m_dataBits);
+    setParity(m_parity);
+    setStopBits(m_stopBits);
+    setFlowControl(m_flowControl);
+    if(!open(QIODevice::ReadWrite)){
         // open error
-        QString errorString = m_serialPort->errorString();
-        qDebug()<<"Serial Port open failure! "<<errorString;
-        emit openFailure(errorString);
+        QString errStr = errorString();
+        qDebug()<<"Serial Port open failure! "<<errStr;
+        emit openFailure(errStr);
     }
 }
 
 void SerialPortClient::stopSlot()
 {
-    if(m_serialPort->isOpen()){
-        m_serialPort->close();
+    if(isOpen()){
+        close();
     }
 }
 
-void SerialPortClient::writeSlot(const SerialPortBuffer &buffer)
+void SerialPortClient::writeBufferSlot(const SerialPortBuffer &buffer)
 {
     qint64 len = 0;
     while(len < buffer.len){
-        qint64 lenTmp = m_serialPort->write(buffer.buffer + len,buffer.len - len);
+        qint64 lenTmp = write(buffer.buffer + len,buffer.len - len);
         if(lenTmp < 0){
             qDebug()<<"Write buffer failure! buffer: "<<
-                  QByteArray(buffer.buffer + len,
-                         static_cast<int>(buffer.len - len)).toHex();
+                  QByteArray(buffer.buffer + len,static_cast<int>(buffer.len - len)).toHex()<<
+                      " PortName: "<<m_portName;
             break;
 
         }
@@ -108,29 +108,25 @@ void SerialPortClient::readyReadSlot()
         qDebug()<<"Peek write buffer failure! Please check queue is abort!";
         return;
     }
-    buffer->len = m_serialPort->read(buffer->buffer,SERIALPORT_DEFAULT_BUF_SIZE);
+    buffer->len = read(buffer->buffer,SERIALPORT_DEFAULT_BUF_SIZE);
     if(buffer->len < 0){
-        qDebug()<<"SerialPort read failure! Error: "<< m_serialPort->errorString();
+        qDebug()<<"SerialPort read failure! Error: "<< errorString() <<
+                  " PortName: "<<m_portName;
         m_queue->next(buffer);
         return;
     }
-    m_queue->push(buffer);
-}
+    buffer->portName = m_portName;
 
-void SerialPortClient::errorOccuredSlot(QSerialPort::SerialPortError error)
-{
-    qDebug()<<"Serial Prot Error: "<<error;
-    emit errorOccured(error);
+    m_queue->push(buffer);
 }
 
 void SerialPortClient::init()
 {
-    m_serialPort = new QSerialPort(this);
-    connect(m_serialPort,&QSerialPort::readyRead,this,&::SerialPortClient::readyReadSlot);
-    connect(m_serialPort,&QSerialPort::errorOccurred,this,&SerialPortClient::errorOccuredSlot);
+    qRegisterMetaType<SerialPortBuffer>("SerialPortBuffer");
+    connect(this,&QSerialPort::readyRead,this,&::SerialPortClient::readyReadSlot);
     connect(this,&SerialPortClient::startSignal,this,&SerialPortClient::startSlot);
     connect(this,&SerialPortClient::stopSignal,this,&SerialPortClient::stopSlot);
-    connect(this,&SerialPortClient::writeSignal,this,&SerialPortClient::writeSlot);
+    connect(this,&SerialPortClient::writeBufferSignal,this,&SerialPortClient::writeBufferSlot);
 }
 
 QSerialPort::FlowControl SerialPortClient::flowControl() const

@@ -57,7 +57,9 @@ void UdpClient::startSlot()
 
 void UdpClient::stopSlot()
 {
-    close();
+    if(state() == QAbstractSocket::BoundState){
+        close();
+    }
 }
 
 void UdpClient::writeBufferSlot(const UDPBuffer &buffer)
@@ -83,7 +85,9 @@ void UdpClient::readyReadSlot()
         }
         buffer->len = readDatagram(buffer->buffer,UDP_DEFAULT_BUF_SIZE,&buffer->addres,&buffer->port);
         if(buffer->len < 0){
-            qDebug()<<"Socket read failure! Error: "<< errorString();
+            qDebug()<<"Socket read failure! Error: "<< errorString()<<
+                      " Host: "<<m_host <<
+                      " Port: "<<m_port;
             m_queue->next(buffer);
             return;
         }
@@ -93,17 +97,14 @@ void UdpClient::readyReadSlot()
 
 void UdpClient::stateChangedSlot(QAbstractSocket::SocketState state)
 {
-    qDebug()<<"UDPClient state changed! Current state: " << state;
-}
-
-void UdpClient::errorSlot(QAbstractSocket::SocketError socketError)
-{
-    qDebug()<<"Udp Socket Error: "<< socketError;
-    emit error(socketError);
+    qDebug()<<"UDPClient state changed! Current state: " << state<<
+              " Host: "<<m_host <<
+              " Port: "<<m_port;
 }
 
 void UdpClient::init()
 {
+    qRegisterMetaType<UDPBuffer>("UDPBuffer");
     connect(this,&UdpClient::startSignal,this,&UdpClient::startSlot);
     connect(this,&UdpClient::stopSignal,this,&UdpClient::stopSlot);
 
@@ -111,19 +112,6 @@ void UdpClient::init()
 
     connect(this,&QUdpSocket::readyRead,this,&UdpClient::readyReadSlot);
     connect(this,&QUdpSocket::stateChanged,this,&UdpClient::stateChangedSlot);
-    connect(this,QOverload<QAbstractSocket::SocketError>::of(&QUdpSocket::error),
-        this,&UdpClient::errorSlot);
-
-}
-
-quint16 UdpClient::port() const
-{
-    return m_port;
-}
-
-void UdpClient::setPort(const quint16 &port)
-{
-    m_port = port;
 }
 
 QHostAddress UdpClient::host() const
@@ -134,4 +122,14 @@ QHostAddress UdpClient::host() const
 void UdpClient::setHost(const QHostAddress &host)
 {
     m_host = host;
+}
+
+quint16 UdpClient::port() const
+{
+    return m_port;
+}
+
+void UdpClient::setPort(const quint16 &port)
+{
+    m_port = port;
 }

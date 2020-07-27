@@ -12,10 +12,10 @@
 struct SerialPortBuffer{
     char buffer[SERIALPORT_DEFAULT_BUF_SIZE];
     qint64 len;
+    QString portName;
 };
 
-
-class Q_DECL_EXPORT SerialPortClient:public QObject
+class Q_DECL_EXPORT SerialPortClient:public QSerialPort
 {
     Q_OBJECT
 public:
@@ -39,8 +39,28 @@ public:
     void start();
     void stop();
 
-    void write(const SerialPortBuffer &buffer);
+    void writeBuffer(const SerialPortBuffer &buffer);
 
+signals:
+    void startSignal();
+    void stopSignal();
+
+    void writeBufferSignal(const SerialPortBuffer &buffer);
+
+    void openFailure(const QString &errorString);
+
+private slots:
+    void startSlot();
+    void stopSlot();
+
+    void writeBufferSlot(const SerialPortBuffer &buffer);
+
+    void readyReadSlot();
+
+private:
+    void init();
+
+public:
     QString portName() const;
     void setPortName(const QString &portName);
 
@@ -59,26 +79,7 @@ public:
     QSerialPort::FlowControl flowControl() const;
     void setFlowControl(const QSerialPort::FlowControl &flowControl);
 
-signals:
-    void startSignal();
-    void stopSignal();
 
-    void writeSignal(const SerialPortBuffer &buffer);
-
-    void openFailure(const QString &errorString);
-    void errorOccured(QSerialPort::SerialPortError error);
-
-private slots:
-    void startSlot();
-    void stopSlot();
-
-    void writeSlot(const SerialPortBuffer &buffer);
-
-    void readyReadSlot();
-    void errorOccuredSlot(QSerialPort::SerialPortError error);
-
-private:
-    void init();
 private:
     QString m_portName;
     QSerialPort::BaudRate m_baudRate;
@@ -87,8 +88,6 @@ private:
     QSerialPort::StopBits m_stopBits;
     QSerialPort::FlowControl m_flowControl;
 
-
-    QSerialPort * m_serialPort;
     AbstractQueue<SerialPortBuffer> *m_queue;
 };
 

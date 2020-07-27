@@ -26,7 +26,7 @@ public:
     explicit TcpClient(AbstractQueue<TCPBuffer> * queue,
                        QObject * parent = nullptr);
 
-    explicit TcpClient(const QString &host,
+    explicit TcpClient(const QHostAddress &host,
           quint16 port,
           AbstractQueue<TCPBuffer> * queue,
           QObject * parent = nullptr);
@@ -39,24 +39,16 @@ public:
 
     void stop();
 
-    QString host() const;
-    void setHost(const QString &host);
-
-    quint16 port() const;
-    void setPort(const quint16 &port);
-
 signals:
     void startSignal();
     void stopSignal();
 
     void writeBufferSignal(const TCPBuffer &buffer);
 
-    void unconnected();
-    void connecting();
-    void connected();
-    void closing();
-
-    void error(QAbstractSocket::SocketError sockeError);
+    void unconnected(const QHostAddress &addr,quint16 port);
+    void connecting(const QHostAddress &addr,quint16 port);
+    void connected(const QHostAddress &addr,quint16 port);
+    void closing(const QHostAddress &addr,quint16 port);
 
 private slots:
     void startSlot();
@@ -66,22 +58,30 @@ private slots:
 
     void readyReadSlot();
     void stateChangedSlot(QTcpSocket::SocketState state);
-    void errorSlot(QAbstractSocket::SocketError socketError);
 
     void timeoutSlot();
 
 private:
     void init();
 
+public:
+    QHostAddress host() const;
+    void setHost(const QHostAddress &host);
+
+    quint16 port() const;
+    void setPort(const quint16 &port);
+
 private:
-    QString m_host;
+    QHostAddress m_host;
     quint16 m_port;
 
     AbstractQueue<TCPBuffer> *m_queue;
 
     QTimer * m_timer;
-
     int m_interval;
+
+    bool m_reconnecting;
+    int m_reconnectCount;
 };
 
 #endif // TCPCLIENT_H

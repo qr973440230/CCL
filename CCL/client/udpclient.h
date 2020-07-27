@@ -35,18 +35,11 @@ public:
     void start();
     void stop();
 
-    QHostAddress host() const;
-    void setHost(const QHostAddress &host);
-
-    quint16 port() const;
-    void setPort(const quint16 &port);
-
 signals:
     void startSignal();
     void stopSignal();
 
     void writeBufferSignal(const UDPBuffer &buffer);
-    void error(QAbstractSocket::SocketError socketError);
 
 private slots:
     void startSlot();
@@ -56,10 +49,17 @@ private slots:
 
     void readyReadSlot();
     void stateChangedSlot(QUdpSocket::SocketState state);
-    void errorSlot(QAbstractSocket::SocketError socketError);
 
 private:
     void init();
+
+public:
+    QHostAddress host() const;
+    void setHost(const QHostAddress &host);
+
+    quint16 port() const;
+    void setPort(const quint16 &port);
+
 
 private:
     QHostAddress m_host;
