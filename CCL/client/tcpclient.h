@@ -7,17 +7,19 @@
 #include <QTimer>
 #include <QHostAddress>
 
-#include "queue/abstractqueue.h"
+#include "../queue/abstractqueue.h"
 
 #define TCP_DEFAULT_BUF_SIZE 1024
 #define TCP_DEfAULT_RECONNECT_TIME 2000
 
-typedef struct TCPBuffer_TAG{
+struct TCPBuffer{
     char buffer[TCP_DEFAULT_BUF_SIZE];
     qint64 len;
-}TCPBuffer;
+    QHostAddress addr;
+    quint16 port;
+};
 
-class Q_DECL_EXPORT TcpClient: public QObject
+class Q_DECL_EXPORT TcpClient: public QTcpSocket
 {
     Q_OBJECT
 public:
@@ -31,7 +33,7 @@ public:
 
     virtual ~TcpClient() override;
 
-    void write(const TCPBuffer &buffer);
+    void writeBuffer(const TCPBuffer &buffer);
 
     void start();
 
@@ -77,7 +79,6 @@ private:
 
     AbstractQueue<TCPBuffer> *m_queue;
 
-    QTcpSocket * m_socket;
     QTimer * m_timer;
 
     int m_interval;

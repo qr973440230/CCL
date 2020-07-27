@@ -3,18 +3,18 @@
 
 #include <QtGlobal>
 #include <QUdpSocket>
-#include "queue/abstractqueue.h"
+#include "../queue/abstractqueue.h"
 
 #define UDP_DEFAULT_BUF_SIZE 1024
 
-typedef struct UDPBuffer_TAG{
+struct UDPBuffer{
     char buffer[UDP_DEFAULT_BUF_SIZE];
     qint64 len;
     QHostAddress addres;
     quint16 port;
-}UDPBuffer;
+};
 
-class Q_DECL_EXPORT UdpClient:public QObject
+class Q_DECL_EXPORT UdpClient:public QUdpSocket
 {
     Q_OBJECT
 public:
@@ -30,7 +30,7 @@ public:
                AbstractQueue<UDPBuffer> *queue,
                QObject * parent = nullptr);
 
-    void write(const UDPBuffer &buffer);
+    void writeBuffer(const UDPBuffer &buffer);
 
     void start();
     void stop();
@@ -45,7 +45,7 @@ signals:
     void startSignal();
     void stopSignal();
 
-    void writeSignal(const UDPBuffer &buffer);
+    void writeBufferSignal(const UDPBuffer &buffer);
     void error(QAbstractSocket::SocketError socketError);
 
 private slots:
@@ -66,8 +66,6 @@ private:
     quint16 m_port;
 
     AbstractQueue<UDPBuffer> *m_queue;
-
-    QUdpSocket * m_socket;
 };
 
 #endif // UDPCLIENT_H

@@ -1,7 +1,7 @@
 ﻿#include "udpclient.h"
 
 UdpClient::UdpClient(AbstractQueue<UDPBuffer> *queue, QObject *parent)
-    :QObject(parent),
+    :QUdpSocket(parent),
       m_host(QHostAddress::LocalHost),
       m_port(0),
       m_queue(queue)
@@ -12,7 +12,7 @@ UdpClient::UdpClient(AbstractQueue<UDPBuffer> *queue, QObject *parent)
 UdpClient::UdpClient(quint16 port,
              AbstractQueue<UDPBuffer> *queue,
              QObject *parent)
-    :QObject(parent),
+    :QUdpSocket(parent),
       m_host(QHostAddress::LocalHost),
       m_port(port),
       m_queue(queue)
@@ -24,7 +24,7 @@ UdpClient::UdpClient(const QHostAddress &host,
              quint16 port,
              AbstractQueue<UDPBuffer> *queue,
              QObject *parent)
-    :QObject(parent),
+    :QUdpSocket(parent),
       m_host(host),
       m_port(port),
       m_queue(queue)
@@ -32,9 +32,9 @@ UdpClient::UdpClient(const QHostAddress &host,
     init();
 }
 
-void UdpClient::write(const UDPBuffer &buffer)
+void UdpClient::writeBuffer(const UDPBuffer &buffer)
 {
-    emit writeSignal(buffer);
+    emit writeBufferSignal(buffer);
 }
 
 void UdpClient::start()
@@ -49,20 +49,20 @@ void UdpClient::stop()
 
 void UdpClient::startSlot()
 {
-    if(m_socket->state() == QAbstractSocket::BoundState){
-        m_socket->close();
+    if(state() == QAbstractSocket::BoundState){
+        close();
     }
-    m_socket->bind(m_host,m_port);
+    bind(m_host,m_port);
 }
 
 void UdpClient::stopSlot()
 {
-    m_socket->close();
+    close();
 }
 
 void UdpClient::writeBufferSlot(const UDPBuffer &buffer)
 {
-    qint64 len = m_socket->writeDatagram(buffer.buffer,buffer.len,
+    qint64 len = writeDatagram(buffer.buffer,buffer.len,
                          buffer.addres,buffer.port);
     if(len < 0){
         qDebug()<<"Write buffer failure! buffer: "<<
@@ -75,15 +75,15 @@ void UdpClient::writeBufferSlot(const UDPBuffer &buffer)
 
 void UdpClient::readyReadSlot()
 {
-    if(m_socket->hasPendingDatagrams()){
+    if(hasPendingDatagrams()){
         UDPBuffer * buffer = m_queue->peekWriteable();
         if(!buffer){
             qDebug()<<"Peek write buffer failure! Please check queue is abort!";
             return;
         }
-        buffer->len = m_socket->readDatagram(buffer->buffer,UDP_DEFAULT_BUF_SIZE,&buffer->addres,&buffer->port);
+        buffer->len = readDatagram(buffer->buffer,UDP_DEFAULT_BUF_SIZE,&buffer->addres,&buffer->port);
         if(buffer->len < 0){
-            qDebug()<<"Socket read failure! Error: "<< m_socket->errorString();
+            qDebug()<<"Socket read failure! Error: "<< errorString();
             m_queue->next(buffer);
             return;
         }
@@ -104,16 +104,14 @@ void UdpClient::errorSlot(QAbstractSocket::SocketError socketError)
 
 void UdpClient::init()
 {
-    m_socket = new QUdpSocket(this);
-
     connect(this,&UdpClient::startSignal,this,&UdpClient::startSlot);
     connect(this,&UdpClient::stopSignal,this,&UdpClient::stopSlot);
 
-    connect(this,&UdpClient::writeSignal,this,&UdpClient::writeBufferSlot);
+    connect(this,&UdpClient::writeBufferSignal,this,&UdpClient::writeBufferSlot);
 
-    connect(m_socket,&QUdpSocket::readyRead,this,&UdpClient::readyReadSlot);
-    connect(m_socket,&QUdpSocket::stateChanged,this,&UdpClient::stateChangedSlot);
-    connect(m_socket,QOverload<QAbstractSocket::SocketError>::of(&QUdpSocket::error),
+    connect(this,&QUdpSocket::readyRead,this,&UdpClient::readyReadSlot);
+    connect(this,&QUdpSocket::stateChanged,this,&UdpClient::stateChangedSlot);
+    connect(this,QOverload<QAbstractSocket::SocketError>::of(&QUdpSocket::error),
         this,&UdpClient::errorSlot);
 
 }

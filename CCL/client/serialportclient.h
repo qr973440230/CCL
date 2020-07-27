@@ -1,18 +1,18 @@
-#ifndef SERIALPORTCLIENT_H
+﻿#ifndef SERIALPORTCLIENT_H
 #define SERIALPORTCLIENT_H
 
 #include <QtGlobal>
 
 #include <QObject>
 #include <QSerialPort>
-#include "queue/abstractqueue.h"
+#include "../queue/abstractqueue.h"
 
 #define SERIALPORT_DEFAULT_BUF_SIZE 1024
 
-typedef struct SerialPortBuffer_TAG{
+struct SerialPortBuffer{
     char buffer[SERIALPORT_DEFAULT_BUF_SIZE];
     qint64 len;
-}SerialPortBuffer;
+};
 
 
 class Q_DECL_EXPORT SerialPortClient:public QObject
