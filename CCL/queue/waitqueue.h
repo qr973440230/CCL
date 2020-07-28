@@ -207,7 +207,8 @@ void WaitQueue<T>::abort()
 template<typename T>
 bool WaitQueue<T>::isAbort()
 {
-    QMutexLocker locker(&m_mutex);
+    // lock should not must be
+    // QMutexLocker locker(&m_mutex);
     return m_abort;
 }
 
