@@ -343,7 +343,8 @@ void DropQueue<T>::abort()
 template<typename T>
 bool DropQueue<T>::isAbort()
 {
-    QMutexLocker locker(&m_mutex);
+    // lock should not must be
+    // QMutexLocker locker(&m_mutex);
     return m_abort;
 }
 
