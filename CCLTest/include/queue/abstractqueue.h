@@ -15,6 +15,9 @@
  * 1.if queue is abort, peekWriteable will return nullptr.
  * 2.if queue is abort or read timeout, peekReadable will return nullptr.
  */
+
+#include <QList>
+
 template <typename T>
 class AbstractQueue
 {
@@ -31,9 +34,13 @@ public:
 
     virtual T * peekReadable(unsigned long timeout) = 0;
     virtual void next(T * data) = 0;
+    virtual QList<T*> peekAllReadable(unsigned long timeout) = 0;
+    virtual void nextAll(const QList<T*> &list) = 0;
 
     virtual T * peekWriteable() = 0;
     virtual void push(T * data) = 0;
+    virtual QList<T*> peekAllWriteable() = 0;
+    virtual void pushAll(const QList<T*> &list) = 0;
 
     virtual void abort() = 0;
     virtual bool isAbort() = 0;

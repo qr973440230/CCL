@@ -18,7 +18,7 @@ class DropQueue: public AbstractQueue<T>{
     typedef typename AbstractQueue<T>::QueueNode Node;
 
 public:
-    explicit DropQueue();
+    DropQueue();
     explicit DropQueue(unsigned int maxSize,unsigned long dropTimeout);
     ~DropQueue();
 
@@ -227,7 +227,7 @@ void DropQueue<T>::nextAll(const QList<T *> &list)
         readNode = nullptr;
     }
 
-    m_cond.wakeAll();
+    m_cond.wakeOne();
     m_mutex.unlock();
 
 }
@@ -322,8 +322,9 @@ void DropQueue<T>::pushAll(const QList<T*> &list)
         writeNode = nullptr;
     }
 
-    m_cond.wakeAll();
+    m_cond.wakeOne();
     m_mutex.unlock();
+
 }
 
 template<typename T>

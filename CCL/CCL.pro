@@ -1,8 +1,7 @@
 QT -= gui
-QT += serialport network
+QT += network
 
 TEMPLATE = lib
-DEFINES += CCL_LIBRARY
 
 CONFIG += c++11
 
@@ -16,9 +15,13 @@ DEFINES += QT_DEPRECATED_WARNINGS
 # In order to do so, uncomment the following line.
 # You can also select to disable deprecated APIs only up to a certain version of Qt.
 #DEFINES += QT_DISABLE_DEPRECATED_BEFORE=0x060000    # disables all the APIs deprecated before Qt 6.0.0
+contains(DEFINES,USE_SERIALPORT){
+    QT += serialport
+    SOURCES += client/serialportclient.cpp
+    HEADERS += client/serialportclient.h
+}
 
 SOURCES += \
-        client/serialportclient.cpp \
         client/udpclient.cpp \
         client/tcpclient.cpp \
         server/tcpserver.cpp
@@ -28,7 +31,6 @@ HEADERS += \
         queue/abstractqueue.h \
         queue/dropqueue.h \
         queue/waitqueue.h \
-        client/serialportclient.h \
         client/udpclient.h \
         client/tcpclient.h \
         server/tcpserver.h
@@ -45,32 +47,45 @@ MOC_DIR = $$OUT_PWD/moc_dir
 UI_DIR = $$OUT_PWD/ui_dir
 RCC_DIR = $$OUT_PWD/rcc_dir
 
+TARGET = ccl
+
+COMPILER_PATH = msvc
+win32-g++{
+    COMPILER_PATH = g++
+}
+
+win32-msvc{
+    COMPILER_PATH = msvc
+}
+
+BUILD_PATH = debug
 CONFIG(debug,debug|release){
     DESTDIR = $$OUT_PWD/debug
+    BUILD_PATH = debug
 }
 
 CONFIG(release,debug|release){
     DESTDIR = $$OUT_PWD/release
+    BUILD_PATH = release
 }
+
+INCLUDE_DIR = $$PWD/../out/include/$$TARGET
+LIB_DIR = $$PWD/../out/lib/$$QT_ARCH/$$COMPILER_PATH/$$BUILD_PATH
+SHARE_DIR = $$PWD/../out/share/$$QT_ARCH/$$COMPILER_PATH/$$BUILD_PATH
 
 win32{
     libSrc = $$DESTDIR/*.lib
-    libDst = $$OUT_PWD/lib
     libSrc = $$replace(libSrc,/,\\)
-    libDst = $$replace(libDst,/,\\)
+    libDst = $$replace(LIB_DIR,/,\\)
     aSrc = $$DESTDIR/*.a
-    aDst = $$OUT_PWD/lib
     aSrc = $$replace(aSrc,/,\\)
-    aDst = $$replace(aDst,/,\\)
+    aDst = $$replace(LIB_DIR,/,\\)
     dllSrc = $$DESTDIR/*.dll
-    dllDst = $$OUT_PWD/share
     dllSrc = $$replace(dllSrc,/,\\)
-    dllDst = $$replace(dllDst,/,\\)
+    dllDst = $$replace(SHARE_DIR,/,\\)
     includeSrc = $$PWD/*.h
-    includeDst = $$OUT_PWD/include
     includeSrc = $$replace(includeSrc,/,\\)
-    includeDst = $$replace(includeDst,/,\\)
-
+    includeDst = $$replace(INCLUDE_DIR,/,\\)
     QMAKE_POST_LINK += xcopy $$libSrc $$libDst /D /Y /S /C /I &
     QMAKE_POST_LINK += xcopy $$aSrc $$aDst /D /Y /S /C /I &
     QMAKE_POST_LINK += xcopy $$dllSrc $$dllDst /D /Y /S /C /I &

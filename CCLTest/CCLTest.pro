@@ -27,8 +27,6 @@ HEADERS += \
 SOURCES += \
         main.cpp
 
-LIBS += -L$$PWD/lib -lccl
-
 OBJECTS_DIR = $$OUT_PWD/objects_dir
 MOC_DIR = $$OUT_PWD/moc_dir
 UI_DIR = $$OUT_PWD/ui_dir
@@ -36,10 +34,12 @@ RCC_DIR = $$OUT_PWD/rcc_dir
 
 CONFIG(debug,debug|release){
     DESTDIR = $$OUT_PWD/debug
+    LIBS += -L$$PWD/lib -lccld
 }
 
 CONFIG(release,debug|release){
     DESTDIR = $$OUT_PWD/release
+    LIBS += -L$$PWD/lib -lccl
 }
 
 win32{

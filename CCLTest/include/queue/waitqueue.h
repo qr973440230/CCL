@@ -22,9 +22,13 @@ public:
 
     virtual T * peekReadable(unsigned long timeout) override;
     virtual void next(T * data) override;
+    virtual QList<T*> peekAllReadable(unsigned long timeout) override;
+    virtual void nextAll(const QList<T*> &list) override;
 
     virtual T * peekWriteable() override;
     virtual void push(T * data) override;
+    virtual QList<T*> peekAllWriteable() override;
+    virtual void pushAll(const QList<T*> &list) override;
 
     virtual void abort() override;
     virtual bool isAbort() override;
@@ -103,7 +107,26 @@ WaitQueue<T>::WaitQueue(unsigned long maxSize)
 template<typename T>
 WaitQueue<T>::~WaitQueue()
 {
+    while(m_rIdx->next != m_wIdx){
+        Node *readNode = m_rIdx->next;
+        readNode->pre->next = readNode->next;
+        readNode->next->pre = readNode->pre;
+        readNode->next = nullptr;
+        readNode->pre = nullptr;
+        delete  readNode;
+    }
 
+    while(m_wIdx->next != m_rIdx){
+        Node * writeNode = m_wIdx->next;
+        writeNode->pre->next = writeNode->next;
+        writeNode->next->pre = writeNode->pre;
+        writeNode->pre = nullptr;
+        writeNode->next = nullptr;
+        delete  writeNode;
+    }
+
+    delete m_rIdx;
+    delete m_wIdx;
 }
 
 template<typename T>
@@ -153,6 +176,58 @@ void WaitQueue<T>::next(T *data)
 }
 
 template<typename T>
+QList<T *> WaitQueue<T>::peekAllReadable(unsigned long timeout)
+{
+    QList<T*> list;
+    QMutexLocker locker(&m_mutex);
+    while(m_rIdx->next == m_wIdx && !m_abort){
+        if(!m_cond.wait(&m_mutex,timeout)){
+            // timeout
+            return list;
+        }
+    }
+
+    if(m_abort){
+        return list;
+    }
+
+    while(m_rIdx->next != m_wIdx){
+        // detach read node
+        Node *readNode = m_rIdx->next;
+        readNode->pre->next = readNode->next;
+        readNode->next->pre = readNode->pre;
+        readNode->next = nullptr;
+        readNode->pre = nullptr;
+        list.append(&readNode->data);
+    }
+
+    return list;
+}
+
+template<typename T>
+void WaitQueue<T>::nextAll(const QList<T *> &list)
+{
+    m_mutex.lock();
+
+    for(auto data : list){
+        if(!m_map.contains(data)){
+            continue;
+        }
+
+        // insert read node
+        Node *readNode = m_map[data];
+        readNode->pre = m_rIdx->pre;
+        readNode->next = m_rIdx;
+        readNode->pre->next = readNode;
+        readNode->next->pre = readNode;
+        readNode = nullptr;
+    }
+
+    m_cond.wakeAll();
+    m_mutex.unlock();
+}
+
+template<typename T>
 T *WaitQueue<T>::peekWriteable()
 {
     QMutexLocker locker(&m_mutex);
@@ -192,6 +267,51 @@ void WaitQueue<T>::push(T *data)
     writeNode = nullptr;
 
     m_cond.wakeOne();
+    m_mutex.unlock();
+}
+
+template<typename T>
+QList<T *> WaitQueue<T>::peekAllWriteable()
+{
+    QList<T*> list;
+    QMutexLocker locker(&m_mutex);
+    while(m_wIdx->next == m_rIdx && !m_abort){
+        m_cond.wait(&m_mutex);
+    }
+
+    if(m_abort){
+        return list;
+    }
+
+    while(m_wIdx->next != m_rIdx){
+        // detach write node
+        Node * writeNode = m_wIdx->next;
+        writeNode->pre->next = writeNode->next;
+        writeNode->next->pre = writeNode->pre;
+        writeNode->pre = nullptr;
+        writeNode->next = nullptr;
+        list.append(&writeNode->data);
+    }
+
+    return list;
+}
+
+template<typename T>
+void WaitQueue<T>::pushAll(const QList<T *> &list)
+{
+    m_mutex.lock();
+
+    for(auto data : list){
+        // insert write node
+        Node * writeNode = m_map[data];
+        writeNode->pre = m_wIdx->pre;
+        writeNode->next = m_wIdx;
+        writeNode->pre->next = writeNode;
+        writeNode->next->pre = writeNode;
+        writeNode = nullptr;
+    }
+
+    m_cond.wakeAll();
     m_mutex.unlock();
 }
 

@@ -82,9 +82,9 @@ void TcpClient::writeBufferSlot(const TCPBuffer &buffer)
         qint64 lenTmp = write(buffer.buffer + len,buffer.len - len);
         if(lenTmp < 0){
             qDebug()<<"Write buffer failure! Error:"<<errorString()<<
-                      " Buffer: "<<QByteArray(buffer.buffer + len,static_cast<int>(buffer.len - len)).toHex() <<
-                      " Addr: "<<peerAddress() <<
-                      " Port: "<<peerPort();
+                      " Buffer: "<<QByteArray(buffer.buffer + len,static_cast<int>(buffer.len - len)).length() <<
+                      " Addr: "<<m_host<<
+                      " Port: "<<m_port;
             break;
         }
         len += lenTmp;
