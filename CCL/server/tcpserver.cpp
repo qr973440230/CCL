@@ -2,7 +2,7 @@
 
 #include <QThread>
 
-TcpServer::TcpServer(AbstractQueue<TCPBuffer> *queue, QObject *parent)
+TcpServer::TcpServer(AbstractQueue<MessageBuffer> *queue, QObject *parent)
     :QTcpServer(parent),
       m_queue(queue)
 {
@@ -10,7 +10,7 @@ TcpServer::TcpServer(AbstractQueue<TCPBuffer> *queue, QObject *parent)
 }
 
 TcpServer::TcpServer(const QHostAddress &host, quint16 port,
-                     AbstractQueue<TCPBuffer> *queue, QObject *parent)
+                     AbstractQueue<MessageBuffer> *queue, QObject *parent)
     :QTcpServer(parent),
       m_host(host),
       m_port(port),
@@ -35,7 +35,7 @@ void TcpServer::stop()
     emit stopSignal();
 }
 
-void TcpServer::writeBuffer(const TCPBuffer &buffer)
+void TcpServer::writeBuffer(const MessageBuffer &buffer)
 {
     emit writeBufferSignal(buffer);
 }
@@ -61,7 +61,7 @@ void TcpServer::stopSlot()
     }
 }
 
-void TcpServer::writeBufferSlot(const TCPBuffer &buffer)
+void TcpServer::writeBufferSlot(const MessageBuffer &buffer)
 {
     if(buffer.addr.isNull()){
         // send all
@@ -101,15 +101,11 @@ void TcpServer::clientDisconnectedSlot(const QHostAddress &addr, quint16 port)
     QString key = QString("%1_%2").arg(addr.toString()).arg(port);
     TcpClient * client = m_clients.value(key,nullptr);
     if(client){
-        qDebug()<<"Client has Closed!"<<
-                  " Addr: "<<addr<<
-                  " Port: "<<port;
-
         client->close();
         client->deleteLater();
         m_clients.remove(key);
     }else{
-        qDebug()<< "Unkown Client!!! Addr: "<<addr<<
+        qWarning()<< "Unkown Client!!! Addr: "<<addr<<
                    " Port: "<<port;
     }
 }
@@ -117,8 +113,8 @@ void TcpServer::clientDisconnectedSlot(const QHostAddress &addr, quint16 port)
 void TcpServer::incomingConnection(qintptr handle)
 {
     TcpClient * client = new TcpClient(m_queue);
-    connect(client,&TcpClient::unconnected,this,&TcpServer::clientDisconnected);
-    connect(client,&TcpClient::unconnected,this,&TcpServer::clientDisconnectedSlot);
+    connect(client,&TcpClient::disconnectedSignal,this,&TcpServer::clientDisconnected);
+    connect(client,&TcpClient::disconnectedSignal,this,&TcpServer::clientDisconnectedSlot);
 
     client->setSocketDescriptor(handle);
     QHostAddress peerAddress = client->peerAddress();
@@ -138,7 +134,7 @@ void TcpServer::init()
     m_thread = new QThread();
     m_thread->start();
 
-    qRegisterMetaType<TCPBuffer>("TCPBuffer");
+    qRegisterMetaType<MessageBuffer>("TCPBuffer");
     qRegisterMetaType<QHostAddress>("QHostAddress");
     connect(this,&TcpServer::startSignal,this,&TcpServer::startSlot);
     connect(this,&TcpServer::stopSignal,this,&TcpServer::stopSlot);

@@ -14,23 +14,23 @@ class Q_DECL_EXPORT TcpServer:public QTcpServer
     Q_OBJECT
 
 public:
-    explicit TcpServer(AbstractQueue<MessageBuffer> * queue,
+    explicit TcpServer(AbstractQueue<TCPBuffer> * queue,
                        QObject * parent = nullptr);
     explicit TcpServer(const QHostAddress &host,quint16 port,
-                       AbstractQueue<MessageBuffer> * queue,
+                       AbstractQueue<TCPBuffer> * queue,
                        QObject * parent = nullptr);
     ~TcpServer();
 
     void start();
     void stop();
 
-    void writeBuffer(const MessageBuffer &buffer);
+    void writeBuffer(const TCPBuffer &buffer);
 
 signals:
     void startSignal();
     void stopSignal();
 
-    void writeBufferSignal(const MessageBuffer &buffer);
+    void writeBufferSignal(const TCPBuffer &buffer);
 
     void listenError(const QString &error);
 
@@ -41,7 +41,7 @@ private slots:
     void startSlot();
     void stopSlot();
 
-    void writeBufferSlot(const MessageBuffer &buffer);
+    void writeBufferSlot(const TCPBuffer &buffer);
     void clientDisconnectedSlot(const QHostAddress &addr,quint16 port);
 
 protected:
@@ -62,7 +62,7 @@ private:
     QHostAddress m_host;
     quint16 m_port;
 
-    AbstractQueue<MessageBuffer> * m_queue;
+    AbstractQueue<TCPBuffer> * m_queue;
 
     QThread * m_thread;
     QMap<QString,TcpClient*> m_clients;

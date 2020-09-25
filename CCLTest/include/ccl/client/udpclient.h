@@ -7,7 +7,7 @@
 
 #define UDP_DEFAULT_BUF_SIZE 1024
 
-struct MessageBuffer{
+struct UDPBuffer{
     char buffer[UDP_DEFAULT_BUF_SIZE];
     qint64 len;
     QHostAddress addres;
@@ -18,19 +18,19 @@ class Q_DECL_EXPORT UdpClient:public QUdpSocket
 {
     Q_OBJECT
 public:
-    explicit UdpClient(AbstractQueue<MessageBuffer> * queue,
+    explicit UdpClient(AbstractQueue<UDPBuffer> * queue,
                        QObject * parent = nullptr);
 
     explicit UdpClient(quint16 port,
-               AbstractQueue<MessageBuffer> *queue,
+               AbstractQueue<UDPBuffer> *queue,
                QObject * parent = nullptr);
 
     explicit UdpClient(const QHostAddress &host,
                quint16 port,
-               AbstractQueue<MessageBuffer> *queue,
+               AbstractQueue<UDPBuffer> *queue,
                QObject * parent = nullptr);
 
-    void writeBuffer(const MessageBuffer &buffer);
+    void writeBuffer(const UDPBuffer &buffer);
 
     void start();
     void stop();
@@ -39,13 +39,13 @@ signals:
     void startSignal();
     void stopSignal();
 
-    void writeBufferSignal(const MessageBuffer &buffer);
+    void writeBufferSignal(const UDPBuffer &buffer);
 
 private slots:
     void startSlot();
     void stopSlot();
 
-    void writeBufferSlot(const MessageBuffer &buffer);
+    void writeBufferSlot(const UDPBuffer &buffer);
 
     void readyReadSlot();
     void stateChangedSlot(QUdpSocket::SocketState state);
@@ -65,7 +65,7 @@ private:
     QHostAddress m_host;
     quint16 m_port;
 
-    AbstractQueue<MessageBuffer> *m_queue;
+    AbstractQueue<UDPBuffer> *m_queue;
 };
 
 #endif // UDPCLIENT_H

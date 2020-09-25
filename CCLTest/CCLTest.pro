@@ -34,7 +34,7 @@ RCC_DIR = $$OUT_PWD/rcc_dir
 
 CONFIG(debug,debug|release){
     DESTDIR = $$OUT_PWD/debug
-    LIBS += -L$$PWD/lib -lccld
+    LIBS += -L$$PWD/lib -lccl
 }
 
 CONFIG(release,debug|release){

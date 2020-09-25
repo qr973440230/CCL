@@ -35,7 +35,6 @@ public:
                   AbstractQueue<SerialPortBuffer> *queue,
                   QObject * parent = nullptr);
 
-
     void start();
     void stop();
 
@@ -78,7 +77,6 @@ public:
 
     QSerialPort::FlowControl flowControl() const;
     void setFlowControl(const QSerialPort::FlowControl &flowControl);
-
 
 private:
     QString m_portName;

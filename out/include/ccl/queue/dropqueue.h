@@ -227,9 +227,8 @@ void DropQueue<T>::nextAll(const QList<T *> &list)
         readNode = nullptr;
     }
 
-    m_cond.wakeOne();
+    m_cond.wakeAll();
     m_mutex.unlock();
-
 }
 
 template<typename T>
@@ -239,7 +238,9 @@ T *DropQueue<T>::peekWriteable()
     while(m_wIdx->next == m_rIdx && !m_abort){
         if(!m_cond.wait(&m_mutex,m_dropTimeout)){
             // timeout
-            m_rIdx = m_rIdx->next;
+            if(m_rIdx->next != m_wIdx){
+                m_rIdx = m_rIdx->next;
+            }
         }
     }
 
@@ -286,7 +287,9 @@ QList<T *> DropQueue<T>::peekAllWriteable()
     while(m_wIdx->next == m_rIdx && !m_abort){
         if(!m_cond.wait(&m_mutex,m_dropTimeout)){
             // timeout
-            m_rIdx = m_rIdx->next;
+            if(m_rIdx->next != m_wIdx){
+                m_rIdx = m_rIdx->next;
+            }
         }
     }
 
@@ -322,7 +325,7 @@ void DropQueue<T>::pushAll(const QList<T*> &list)
         writeNode = nullptr;
     }
 
-    m_cond.wakeOne();
+    m_cond.wakeAll();
     m_mutex.unlock();
 
 }
@@ -339,9 +342,9 @@ void DropQueue<T>::abort()
 template<typename T>
 bool DropQueue<T>::isAbort()
 {
-    QMutexLocker locker(&m_mutex);
+    // lock should not must be
+    // QMutexLocker locker(&m_mutex);
     return m_abort;
 }
-
 
 #endif // DROPQUEUE_H

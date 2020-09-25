@@ -12,7 +12,7 @@
 #define TCP_DEFAULT_BUF_SIZE 1024
 #define TCP_DEfAULT_RECONNECT_TIME 2000
 
-struct MessageBuffer{
+struct TCPBuffer{
     char buffer[TCP_DEFAULT_BUF_SIZE];
     qint64 len;
     QHostAddress addr;
@@ -23,17 +23,17 @@ class Q_DECL_EXPORT TcpClient: public QTcpSocket
 {
     Q_OBJECT
 public:
-    explicit TcpClient(AbstractQueue<MessageBuffer> * queue,
+    explicit TcpClient(AbstractQueue<TCPBuffer> * queue,
                        QObject * parent = nullptr);
 
     explicit TcpClient(const QHostAddress &host,
           quint16 port,
-          AbstractQueue<MessageBuffer> * queue,
+          AbstractQueue<TCPBuffer> * queue,
           QObject * parent = nullptr);
 
     virtual ~TcpClient() override;
 
-    void writeBuffer(const MessageBuffer &buffer);
+    void writeBuffer(const TCPBuffer &buffer);
 
     void start();
 
@@ -43,7 +43,7 @@ signals:
     void startSignal();
     void stopSignal();
 
-    void writeBufferSignal(const MessageBuffer &buffer);
+    void writeBufferSignal(const TCPBuffer &buffer);
 
     void unconnected(const QHostAddress &addr,quint16 port);
     void connecting(const QHostAddress &addr,quint16 port);
@@ -54,7 +54,7 @@ private slots:
     void startSlot();
     void stopSlot();
 
-    void writeBufferSlot(const MessageBuffer &buffer);
+    void writeBufferSlot(const TCPBuffer &buffer);
 
     void readyReadSlot();
     void stateChangedSlot(QTcpSocket::SocketState state);
@@ -75,7 +75,7 @@ private:
     QHostAddress m_host;
     quint16 m_port;
 
-    AbstractQueue<MessageBuffer> *m_queue;
+    AbstractQueue<TCPBuffer> *m_queue;
 
     QTimer * m_timer;
     int m_interval;

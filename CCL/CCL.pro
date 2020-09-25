@@ -1,5 +1,6 @@
 QT -= gui
 QT += network
+QT += serialport
 
 TEMPLATE = lib
 
@@ -15,19 +16,21 @@ DEFINES += QT_DEPRECATED_WARNINGS
 # In order to do so, uncomment the following line.
 # You can also select to disable deprecated APIs only up to a certain version of Qt.
 #DEFINES += QT_DISABLE_DEPRECATED_BEFORE=0x060000    # disables all the APIs deprecated before Qt 6.0.0
-contains(DEFINES,USE_SERIALPORT){
-    QT += serialport
-    SOURCES += client/serialportclient.cpp
-    HEADERS += client/serialportclient.h
-}
 
 SOURCES += \
+        client/serialportclient.cpp \
+        client/tcpclientthread.cpp \
         client/udpclient.cpp \
         client/tcpclient.cpp \
+        client/udpclientthread.cpp \
         server/tcpserver.cpp
 
 
 HEADERS += \
+        client/messagebuffer.h \
+        client/serialportclient.h \
+        client/tcpclientthread.h \
+        client/udpclientthread.h \
         queue/abstractqueue.h \
         queue/dropqueue.h \
         queue/waitqueue.h \

@@ -8,26 +8,26 @@
 class TestServerThead:public QThread
 {
 public:
-    TestServerThead(AbstractQueue<TCPBuffer> * queue,TcpServer * tcpServer);
+    TestServerThead(AbstractQueue<MessageBuffer> * queue,TcpServer * tcpServer);
 
 protected:
     void run() override;
 
 private:
-    AbstractQueue<TCPBuffer> * m_queue;
+    AbstractQueue<MessageBuffer> * m_queue;
     TcpServer * m_tcpServer;
 };
 
 class TestClientThread: public QThread
 {
 public:
-    TestClientThread(AbstractQueue<TCPBuffer> * queue,TcpClient * client);
+    TestClientThread(AbstractQueue<MessageBuffer> * queue,TcpClient * client);
 
 protected:
     void run() override;
 
 private:
-    AbstractQueue<TCPBuffer> * m_queue;
+    AbstractQueue<MessageBuffer> * m_queue;
     TcpClient * m_tcpClient;
 };
 
@@ -38,7 +38,7 @@ int main(int argc, char *argv[])
     QThread thread;
     thread.start();
 
-    DropQueue<TCPBuffer> serverDropQueue(200,1000);
+    DropQueue<MessageBuffer> serverDropQueue(200,1000);
 
     TcpServer server(&serverDropQueue);
     server.setHost(QHostAddress::Any);
@@ -55,7 +55,7 @@ int main(int argc, char *argv[])
                   " Port: "<<port;
     });
 
-    DropQueue<TCPBuffer> clientDropQueue(200,1000);
+    DropQueue<MessageBuffer> clientDropQueue(200,1000);
     TcpClient client(QHostAddress("127.0.0.1"),9898,&clientDropQueue);
     client.start();
     client.moveToThread(&thread);
@@ -69,12 +69,12 @@ int main(int argc, char *argv[])
     return a.exec();
 }
 
-TestServerThead::TestServerThead(AbstractQueue<TCPBuffer> *queue, TcpServer *tcpServer):m_queue(queue),m_tcpServer(tcpServer)
+TestServerThead::TestServerThead(AbstractQueue<MessageBuffer> *queue, TcpServer *tcpServer):m_queue(queue),m_tcpServer(tcpServer)
 {
     // 每200ms发送数据
     QTimer * timer = new QTimer(this);
     connect(timer,&QTimer::timeout,this,[this](){
-        TCPBuffer buffer;
+        MessageBuffer buffer;
         buffer.len = TCP_DEFAULT_BUF_SIZE;
         m_tcpServer->writeBuffer(buffer);
     });
@@ -84,7 +84,7 @@ TestServerThead::TestServerThead(AbstractQueue<TCPBuffer> *queue, TcpServer *tcp
 void TestServerThead::run()
 {
     while(1){
-        TCPBuffer * buffer = m_queue->peekReadable(1000);
+        MessageBuffer * buffer = m_queue->peekReadable(1000);
         if(!buffer){
             // 超时
             continue;
@@ -97,7 +97,7 @@ void TestServerThead::run()
     }
 }
 
-TestClientThread::TestClientThread(AbstractQueue<TCPBuffer> *queue, TcpClient *client)
+TestClientThread::TestClientThread(AbstractQueue<MessageBuffer> *queue, TcpClient *client)
     :m_queue(queue),m_tcpClient(client)
 {
     QTimer * timer = new QTimer(this);
@@ -113,7 +113,7 @@ TestClientThread::TestClientThread(AbstractQueue<TCPBuffer> *queue, TcpClient *c
 
     QTimer * timer2 = new QTimer(this);
     connect(timer2,&QTimer::timeout,this,[this](){
-        TCPBuffer buffer;
+        MessageBuffer buffer;
         buffer.len = TCP_DEFAULT_BUF_SIZE;
         m_tcpClient->writeBuffer(buffer);
     });
@@ -134,7 +134,7 @@ void TestClientThread::run()
 
 //        m_queue->next(buffer);
 
-        QList<TCPBuffer *> list = m_queue->peekAllReadable(1000);
+        QList<MessageBuffer *> list = m_queue->peekAllReadable(1000);
         qDebug()<<"Client: "<< list.size();
         m_queue->nextAll(list);
 
